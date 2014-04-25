@@ -175,6 +175,13 @@ setup(
                   library_dirs=[get_config_var('LIBDIR')],
                   **extra_extension_args
                   ),
+        # Requires proj4 v4.9 (perhaps support a direct install of geodesic?
+        Extension('cartopy.geodesic._geodesic', ['lib/cartopy/geodesic/_geodesic.pyx'],
+                  include_dirs=[get_config_var('INCLUDEDIR'), np.get_include()],
+                  libraries=['proj'],
+                  library_dirs=[get_config_var('LIBDIR')],
+                  **extra_extension_args
+                  ),
     ],
 
     cmdclass={'build_ext': build_ext, 'header_check': HeaderCheck},
