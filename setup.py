@@ -316,6 +316,7 @@ else:
 with open(os.path.join(HERE, 'README.rst'), 'r') as fh:
     description = ''.join(fh.readlines())
 
+
 # Main setup
 # ==========
 setup(
@@ -371,6 +372,13 @@ setup(
             library_dirs=[library_dir] + proj_library_dirs,
             **extra_extension_args
         ),
+        Extension('cartopy.geodesic._geodesic', 
+		  ['lib/cartopy/geodesic/_geodesic.pyx'],
+                  include_dirs=[include_dir, np.get_include()] + proj_includes,
+                  libraries=proj_libraries,
+                  library_dirs=['/data/local/jhogg/proj4/lib', library_dir] + proj_library_dirs,
+                  **extra_extension_args
+                  ),
     ],
 
     cmdclass={'build_ext': build_ext},
