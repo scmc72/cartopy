@@ -376,7 +376,7 @@ setup(
 		  ['lib/cartopy/geodesic/_geodesic.pyx'],
                   include_dirs=[include_dir, np.get_include()] + proj_includes,
                   libraries=proj_libraries,
-                  library_dirs=['/data/local/jhogg/proj4/lib', library_dir] + proj_library_dirs,
+                  library_dirs=['/data/local/beckmann/proj4_tmp/lib', library_dir] + proj_library_dirs,
                   **extra_extension_args
                   ),
     ],
