@@ -60,7 +60,20 @@ cdef class Geodesic:
         cdef double lat, lon, azi
         geod_direct(self.geod, lat0, lon0, azi0, distance, &lat, &lon, &azi)
         return lon, lat, azi
-    
+        
+    def vec_direct(self, lon0lat0, azi0, distance):
+        #take in a lat-long array; an azimuth array and a distance array
+        return_pts = np.empty((lon0lat0.shape[1],3),dtype = np.float32)
+        cdef double lat, lon, azi
+        
+        for i in range(lon0lat0.shape[1]):
+            geod_direct(self.geod, lon0lat0[0,i], lon0lat0[1,i], azi0[i], distance[i], &lat, &lon, &azi)
+            return_pts[i,0] = lat
+            return_pts[i,0] = lon
+            return_pts[i,0] = azi
+            
+        return return_pts
+        
     def inverse(self, lon0, lat0, lon1, lat1):
         cdef double dist, azi0, azi1
         geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
