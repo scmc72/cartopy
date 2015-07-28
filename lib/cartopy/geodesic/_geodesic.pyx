@@ -85,8 +85,7 @@ cdef class Geodesic:
             raise ValueError()
         ####
         
-        #results = np.zeros((n_points, 3))
-        lst = []
+        results = np.zeros((n_points, 3))
         
         cdef double dist, azi0, azi1
              
@@ -97,13 +96,11 @@ cdef class Geodesic:
             
             geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
             
-            #results[i,0] = dist
-            #results[i,1] = azi0
-            #results[i,2] = azi1
-            
-            lst.append((dist,azi0,azi1))
+            results[i,0] = dist
+            results[i,1] = azi0
+            results[i,2] = azi1
         
-        return lst
+        return results
     
     def circle(self, lon, lat, distance, int n_samples=180, endpoint=False):
         cdef double lat_o, lon_o, azi_o
