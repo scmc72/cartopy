@@ -62,15 +62,33 @@ cdef class Geodesic:
         return lon, lat, azi
         
     def vec_direct(self, lon0lat0, azi0, distance):
+        
+        if type(lon0lat0) != np.ndarray or type(azi0) != np.ndarray or type(distance) != np.ndarray:
+            print 'type error: inputs must be type: "numpy.ndarray"'
+      
+        
+        if lon0lat0.shape[1] != 2:
+            print 'ERROR: lon0lat0 must have shape: (npoints,2)'
+        
+        if lon0lat0.shape[0] != azi0.size or lon0lat0.shape[0] != distance.size or azi0.size != distance.size:
+            print 'ERROR: number of points must be the same for all inputs: array sizes do not match!'
+            
+        
+            
+        
+        
         #take in a lat-long array; an azimuth array and a distance array
-        return_pts = np.empty((lon0lat0.shape[1],3),dtype = np.float32)
+        return_pts = np.empty((lon0lat0.shape[0],3), dtype = np.float32)
+        
         cdef double lat, lon, azi
         
-        for i in range(lon0lat0.shape[1]):
-            geod_direct(self.geod, lon0lat0[0,i], lon0lat0[1,i], azi0[i], distance[i], &lat, &lon, &azi)
-            return_pts[i,0] = lat
+        for i in range(lon0lat0.shape[0]):
+        
+            geod_direct(self.geod, lon0lat0[i,1], lon0lat0[i,0], azi0[i], distance[i], &lat, &lon, &azi)
             return_pts[i,0] = lon
-            return_pts[i,0] = azi
+            return_pts[i,1] = lat
+            return_pts[i,2] = azi
+            
             
         return return_pts
         
