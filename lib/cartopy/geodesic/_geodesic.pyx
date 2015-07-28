@@ -60,11 +60,50 @@ cdef class Geodesic:
         cdef double lat, lon, azi
         geod_direct(self.geod, lat0, lon0, azi0, distance, &lat, &lon, &azi)
         return lon, lat, azi
+        
+    def vec_direct(self, lon0lat0, azi0, distance):
+        pass
     
     def inverse(self, lon0, lat0, lon1, lat1):
         cdef double dist, azi0, azi1
         geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
         return dist, azi0, azi1
+        
+    def vec_inverse(self, points, endpoints):
+        
+        cdef int n_points, i
+        
+        n_points = points.shape[0]
+        
+        ####CHECKS
+        
+        #check same number of start and end points
+        if n_points != endpoints.shape[0]:        
+            raise ValueError()
+        #check it is list of points
+        if points.shape[1] != 2 or endpoints.shape[1] != 2:
+            raise ValueError()
+        ####
+        
+        #results = np.zeros((n_points, 3))
+        lst = []
+        
+        cdef double dist, azi0, azi1
+             
+        for i in range(n_points):
+            
+            lat0, lon0 = points[i,0], points[i,1]
+            lat1, lon1 = endpoints[i,0], endpoints[i,1]
+            
+            geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
+            
+            #results[i,0] = dist
+            #results[i,1] = azi0
+            #results[i,2] = azi1
+            
+            lst.append((dist,azi0,azi1))
+        
+        return lst
     
     def circle(self, lon, lat, distance, int n_samples=180, endpoint=False):
         cdef double lat_o, lon_o, azi_o
@@ -85,7 +124,6 @@ cdef class Geodesic:
 
     def __dealloc__(self):
         PyMem_Free(self.geod)
-
 
 def main():
     g = Geodesic()
