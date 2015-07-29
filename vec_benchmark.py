@@ -4,17 +4,17 @@ setup="""
 from cartopy.geodesic import Geodesic
 import numpy as np
 #random latlon points
-points = (np.random.rand(1000,2)-0.5)
+points = (np.random.rand(2000,2)-0.5)
 points[:,0] *= 180
 points[:,1] *= 90
 
-endpoints = (np.random.rand(1000,2)-0.5)
+endpoints = (np.random.rand(2000,2)-0.5)
 endpoints[:,0] *= 180
 endpoints[:,1] *= 90
 
-distance = np.random.rand(1000)*100000
+distance = np.random.rand(2000)*100000
 
-azi = np.random.rand(1000)*360
+azi = np.random.rand(2000)*360
 
 geod = Geodesic()
 
@@ -115,23 +115,35 @@ print "\nTESTING SPEEDS... \n\n"
 
 print "VECTORISED DIRECT"
 
-print timeit.timeit("v_d_benchmark(geod, points, azi, distance)", setup=setup, number = 1000)
+v_d = timeit.timeit("v_d_benchmark(geod, points, azi, distance)", setup=setup, number = 3000)
+
+print v_d
 
 print "-----------------"
 
 print "BASIC LOOP DIRECT"
 
-print timeit.timeit("d_benchmark(geod, points, azi, distance)", setup=setup, number = 1000)
+d = timeit.timeit("d_benchmark(geod, points, azi, distance)", setup=setup, number = 3000)
+
+print d
+
+print "\nPERCENTAGE OF LOOP SPEED:" + str((v_d/d)*100) + "%"
 
 print "############################"
 print "############################"
 
 print "VECTORISED INVERSE"
 
-print timeit.timeit("v_i_benchmark(geod, points, endpoints)", setup=setup, number = 1000)
+v_i = timeit.timeit("v_i_benchmark(geod, points, endpoints)", setup=setup, number = 3000)
+
+print v_i
 
 print "-----------------"
 
 print "BASIC LOOP INVERSE"
 
-print timeit.timeit("i_benchmark(geod, points, endpoints)", setup=setup, number = 1000)
+i = timeit.timeit("i_benchmark(geod, points, endpoints)", setup=setup, number = 3000)
+
+print i
+
+print "\nPERCENTAGE OF LOOP SPEED:" + str((v_i/i)*100) + "%"
