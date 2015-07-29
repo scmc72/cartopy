@@ -1,14 +1,15 @@
 import matplotlib.pyplot as plt
 import cartopy
 import cartopy.crs as ccrs
-
+from cartopy import geodesic
 from scipy.spatial import cKDTree
+import numpy as np
 
 fig = plt.figure()
 
 platcar = ccrs.PlateCarree()
 
-coord_sys = ccrs.Robinson()
+coord_sys = ccrs.InterruptedGoodeHomolosine()
 
 ax = plt.axes(projection=coord_sys)
 
@@ -29,7 +30,29 @@ for string in cartopy.feature.NaturalEarthFeature('physical', 'coastline', '110m
             x.append(point[0])
 	    y.append(point[1])
 
-tree = cKDTree(zip(x,y))
+#tree = cKDTree(zip(x,y))
+
+
+def brute_neighbours(x,y,location):
+    coasts = np.array(zip(x,y))
+    print coasts
+    emp = np.zeros(coasts.shape)
+    location = np.array(location)
+    
+    emp = emp + location
+    print emp
+    loc =[]
+   
+    dist = geodesic.Geodesic().vec_inverse(emp,coasts)
+    
+             
+    return coasts[np.argmin(dist[:,0])]
+    
+            
+            
+            
+    
+
 
 #plt.plot(x, y, 'ro', transform = ccrs.Geodetic())
 
@@ -49,9 +72,11 @@ def mouse_moved(event):
     for location in locations:
         plt.plot(location[0], location[1], 'ro', transform = platcar)
 
-        coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
+        #coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
+        
+        location = ccrs.PlateCarree().transform_point(location[0],location[1], platcar)
 
-        coast_point = tree.data[coast_index]
+        coast_point = brute_neighbours(x,y,location)
 
         plt.plot(coast_point[0], coast_point[1], 'bo', transform = platcar)
 
@@ -68,4 +93,17 @@ ax.add_geometries(cartopy.feature.COASTLINE.geometries().next(), ccrs.Geodetic()
 
 cid = fig.canvas.mpl_connect('motion_notify_event', mouse_moved)
 
+#plt.show()
+
+
+#locc = [50,60]
+
+#loc = brute_neighbours(x,y,locc)
+#print loc
+#plt.plot(loc[0],loc[1],'ro',transform = platcar)
+#plt.plot(locc[0],locc[1],'bo',transform = platcar)
+#plt.plot([locc[0],loc[0]],[locc[1],loc[1]],transform = platcar)
 plt.show()
+
+
+

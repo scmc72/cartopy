@@ -121,7 +121,7 @@ cdef class Geodesic:
         with nogil:
             for i in prange(n_points):
                 
-                geod_inverse(self.geod, points[i,0], points[i,1], endpoints[i,0], endpoints[i,1], &dist, &azi0, &azi1)
+                geod_inverse(self.geod, points[i,1], points[i,0], endpoints[i,1], endpoints[i,0], &dist, &azi0, &azi1)
                 
                 results[i,0] = dist
                 results[i,1] = azi0
