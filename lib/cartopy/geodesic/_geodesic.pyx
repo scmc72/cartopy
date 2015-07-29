@@ -66,13 +66,26 @@ cdef class Geodesic:
         
         cdef int n_points, i
         
-        n_points = lon0lat0.shape[0]
+        n_points = azi0.shape[0]
         
         if lon0lat0.shape[1] != 2:
             raise ValueError('Array of points must have shape (n,2).')
         
-        if n_points != azi0.size or n_points != distance.size:
-            raise ValueError('Number of points must be the same for all inputs:'
+        if distance.size == 1: 
+            distance = np.zeros(n_points) + distance
+            
+        elif n_points != distance.size:
+            raise ValueError('Number of points must be the same for distances:'
+                             'array sizes do not match!')
+        if lon0lat0.shape[0] == 1: 
+            tmp = np.zeros((n_points, 2))
+            tmp[:,0] += lon0lat0[0,0]
+            tmp[:,1] += lon0lat0[0,1]
+            
+            lon0lat0 = tmp
+            
+        elif n_points != lon0lat0.shape[0]:
+            raise ValueError('Number of azimuths must be the same for points:'
                              'array sizes do not match!')
         
         #take in a lat-long array; an azimuth array and a distance array
@@ -89,7 +102,7 @@ cdef class Geodesic:
                 return_pts[i,2] = azi
             
             
-        return return_pts
+        return np.array(return_pts)
 
     def inverse(self, lon0, lat0, lon1, lat1):
         cdef double dist, azi0, azi1
@@ -121,7 +134,8 @@ cdef class Geodesic:
         with nogil:
             for i in prange(n_points):
                 
-                geod_inverse(self.geod, points[i,1], points[i,0], endpoints[i,1], endpoints[i,0], &dist, &azi0, &azi1)
+                geod_inverse(self.geod, points[i,1], points[i,0], endpoints[i,1],
+                             endpoints[i,0], &dist, &azi0, &azi1)
                 
                 results[i,0] = dist
                 results[i,1] = azi0
@@ -129,22 +143,23 @@ cdef class Geodesic:
         
         return np.array(results)
     
-    def circle(self, lon, lat, distance, int n_samples=180, endpoint=False):
-        cdef double lat_o, lon_o, azi_o
-        cdef double center_lon, center_lat, distance_m
+    def circle(self, double lon, double lat, double distance, int n_samples=180, endpoint=False):
+        #cdef double lat_o, lon_o, azi_o
         cdef int i
 
         # Put the input arguments into c-typed values.        
-        center_lon, center_lat = lon, lat
-        distance_m = distance 
+        center = np.array([lon, lat]).reshape((1,2))
+        distance_m = np.asarray(distance).reshape(1)
+        
+        print distance_m.shape
 
-        result = np.empty([n_samples, 2], dtype=np.double)
+        #result = np.empty([n_samples, 2], dtype=np.double)
         azimuths = np.linspace(360., 0., n_samples, endpoint=endpoint).astype(np.double)
+        
+        geod = Geodesic()
 
-        for i in range(n_samples):
-            geod_direct(self.geod, center_lat, center_lon, azimuths[i], distance_m, &lat_o, &lon_o, &azi_o)
-            result[i, :] = lon_o, lat_o
-        return result
+        return geod.vec_direct(center, azimuths, distance_m)
+        
 
     def __dealloc__(self):
         PyMem_Free(self.geod)
@@ -165,8 +180,8 @@ def main():
     import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     
-    x, y = g.circle(0, 52, 500000, n_samples=360, endpoint=True).T
+    circle = g.circle(0, 52, 500000, n_samples=360, endpoint=True).T
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.coastlines()
-    plt.plot(x, y, transform=ccrs.Geodetic())
+    plt.plot(circle[:,0], circle[:,1], transform=ccrs.Geodetic())
     plt.show()
