@@ -9,13 +9,15 @@ fig = plt.figure()
 
 platcar = ccrs.PlateCarree()
 
-coord_sys = ccrs.InterruptedGoodeHomolosine()
+coord_sys = ccrs.Robinson()
 
 ax = plt.axes(projection=coord_sys)
 
 ax.coastlines(resolution = '110m')
 
 ax.set_global()
+
+background = fig.canvas.copy_from_bbox(ax.bbox)
 
 total = 0
 
@@ -57,35 +59,40 @@ def brute_neighbours(x,y,location):
 #plt.plot(x, y, 'ro', transform = ccrs.Geodetic())
 
 locations = []
+
+fig.canvas.draw()
+
 def mouse_moved(event):
     
-    plt.cla()
+    fig.canvas.restore_region(background)
 
-    ax.coastlines(resolution = '110m')
     ax.set_global()
+    
+    location = [0,0]
+    
     if event.xdata is not None and event.ydata is not None:
-        point = platcar.transform_point(event.xdata, event.ydata, coord_sys)
-        locations.append(point)
-    if len(locations) > 1:
-        del locations[0]
+        location = platcar.transform_point(event.xdata, event.ydata, coord_sys)
+
     
-    for location in locations:
-        plt.plot(location[0], location[1], 'ro', transform = platcar)
+    m_pt, = plt.plot(location[0], location[1], 'ro', transform = platcar)
 
-        #coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
-        
-        location = ccrs.PlateCarree().transform_point(location[0],location[1], platcar)
-
-        coast_point = brute_neighbours(x,y,location)
-
-        plt.plot(coast_point[0], coast_point[1], 'bo', transform = platcar)
-
-        plt.plot([location[0], coast_point[0]], [location[1], coast_point[1]], linewidth = 2, transform = platcar)
+    #coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
     
-    fig.canvas.draw()
+    location = ccrs.PlateCarree().transform_point(location[0],location[1], platcar)
+
+    coast_point = brute_neighbours(x,y,location)
+
+    c_pt, = plt.plot(coast_point[0], coast_point[1], 'bo', transform = platcar)
+
+    line, = plt.plot([location[0], coast_point[0]], [location[1], coast_point[1]], linewidth = 2, transform = platcar)
+    
+    ax.draw_artist(m_pt)
+    ax.draw_artist(c_pt)
+    ax.draw_artist(line)
+    
+    fig.canvas.blit(fig.bbox)
 
 print total
-#ax.set_global()
 
 ax.add_geometries(cartopy.feature.COASTLINE.geometries().next(), ccrs.Geodetic(), facecolor = 'blue')
 
@@ -93,16 +100,6 @@ ax.add_geometries(cartopy.feature.COASTLINE.geometries().next(), ccrs.Geodetic()
 
 cid = fig.canvas.mpl_connect('motion_notify_event', mouse_moved)
 
-#plt.show()
-
-
-#locc = [50,60]
-
-#loc = brute_neighbours(x,y,locc)
-#print loc
-#plt.plot(loc[0],loc[1],'ro',transform = platcar)
-#plt.plot(locc[0],locc[1],'bo',transform = platcar)
-#plt.plot([locc[0],loc[0]],[locc[1],loc[1]],transform = platcar)
 plt.show()
 
 
