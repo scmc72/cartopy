@@ -27,6 +27,7 @@ The CRS class is the base-class for all projections defined in :mod:`cartopy.crs
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 import numpy as np
 cimport numpy as np
+from cython.parallel import prange
 
 
 # TODO: Support proj4 <4.9 with spherical approximations?
@@ -40,10 +41,10 @@ cdef extern from "geodesic.h":
 
     void geod_init(geodesic_t, double, double)
     void geod_direct(geodesic_t, double, double, double, double,
-                     double*, double*, double*)
+                     double*, double*, double*) nogil
     
     void geod_inverse(geodesic_t, double, double, double, double,
-                      double*, double*, double*)
+                      double*, double*, double*) nogil
 
 
 cdef class Geodesic:
@@ -61,47 +62,41 @@ cdef class Geodesic:
         geod_direct(self.geod, lat0, lon0, azi0, distance, &lat, &lon, &azi)
         return lon, lat, azi
         
-    def vec_direct(self, lon0lat0, azi0, distance):
-
+    def vec_direct(self, double[:,:] lon0lat0, double[:] azi0, double[:] distance):
         
-        if type(lon0lat0) != np.ndarray or type(azi0) != np.ndarray or type(distance) != np.ndarray:
-            print 'type error: inputs must be type: "numpy.ndarray"'
-      
+        cdef int n_points, i
+        
+        n_points = lon0lat0.shape[0]
         
         if lon0lat0.shape[1] != 2:
-            print 'ERROR: lon0lat0 must have shape: (npoints,2)'
+            raise ValueError('Array of points must have shape (n,2).')
         
-        if lon0lat0.shape[0] != azi0.size or lon0lat0.shape[0] != distance.size or azi0.size != distance.size:
-            print 'ERROR: number of points must be the same for all inputs: array sizes do not match!'
-            
-        
-            
-        
+        if n_points != azi0.size or n_points != distance.size:
+            raise ValueError('Number of points must be the same for all inputs:'
+                             'array sizes do not match!')
         
         #take in a lat-long array; an azimuth array and a distance array
-        return_pts = np.empty((lon0lat0.shape[0],3), dtype = np.float32)
+        cdef double[:,:] return_pts = np.empty((n_points,3))
         
         cdef double lat, lon, azi
         
-        for i in range(lon0lat0.shape[0]):
-        
-            geod_direct(self.geod, lon0lat0[i,1], lon0lat0[i,0], azi0[i], distance[i], &lat, &lon, &azi)
-            return_pts[i,0] = lon
-            return_pts[i,1] = lat
-            return_pts[i,2] = azi
+        with nogil:
+            for i in prange(n_points):
+            
+                geod_direct(self.geod, lon0lat0[i,1], lon0lat0[i,0], azi0[i], distance[i], &lat, &lon, &azi)
+                return_pts[i,0] = lon
+                return_pts[i,1] = lat
+                return_pts[i,2] = azi
             
             
         return return_pts
-        
-
-    
 
     def inverse(self, lon0, lat0, lon1, lat1):
         cdef double dist, azi0, azi1
         geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
         return dist, azi0, azi1
         
-    def vec_inverse(self, points, endpoints):
+    def vec_inverse(self, double[:,:] points, double[:,:] endpoints):
         
         cdef int n_points, i
         
@@ -111,28 +106,28 @@ cdef class Geodesic:
         
         #check same number of start and end points
         if n_points != endpoints.shape[0]:        
-            raise ValueError()
+            raise ValueError('Number of start points and number fo end points'
+                             'must be the same.')
         #check it is list of points
         if points.shape[1] != 2 or endpoints.shape[1] != 2:
-            raise ValueError()
+            raise ValueError('Arguments should be arrays of points (i.e. have'
+                             'shape (n,2)).')
         ####
         
-        results = np.zeros((n_points, 3))
+        cdef double[:,:] results = np.empty((n_points, 3))
         
         cdef double dist, azi0, azi1
-             
-        for i in range(n_points):
-            
-            lat0, lon0 = points[i,0], points[i,1]
-            lat1, lon1 = endpoints[i,0], endpoints[i,1]
-            
-            geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
-            
-            results[i,0] = dist
-            results[i,1] = azi0
-            results[i,2] = azi1
         
-        return results
+        with nogil:
+            for i in prange(n_points):
+                
+                geod_inverse(self.geod, points[i,0], points[i,1], endpoints[i,0], endpoints[i,1], &dist, &azi0, &azi1)
+                
+                results[i,0] = dist
+                results[i,1] = azi0
+                results[i,2] = azi1
+        
+        return np.array(results)
     
     def circle(self, lon, lat, distance, int n_samples=180, endpoint=False):
         cdef double lat_o, lon_o, azi_o
