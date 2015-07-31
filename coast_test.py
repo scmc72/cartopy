@@ -61,7 +61,7 @@ def brute_neighbours(x,y,location):
     #print emp
     loc =[]
    
-    dist = geodesic.Geodesic().vec_inverse(emp,coasts)
+    dist = geodesic.Geodesic().inverse(emp,coasts)
     
              
     return coasts[np.argmin(dist[:,0])]

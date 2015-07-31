@@ -27,10 +27,6 @@ import numpy as np
 cimport numpy as np
 from cython.parallel cimport prange
 
-
-# TODO: Support proj4 <4.9 with spherical approximations?
-
-
 cdef extern from "geodesic.h":
     #External imports of Proj4.9 functions
     cdef struct geod_geodesic:
@@ -83,7 +79,7 @@ cdef class Geodesic:
 
         Args:
 
-            * points - An n (or 1) by 2 numpy.ndarray, list or tuple of lat-lon
+            * points - An n (or 1) by 2 numpy.ndarray, list or tuple of lon-lat
                        points.
                        The starting point(s) from which to travel.
 
@@ -94,7 +90,7 @@ cdef class Geodesic:
                           values (metres).
 
         Returns:
-            An n by 3 np.ndarray of lats, lons, and azimuths of the located 
+            An n by 3 np.ndarray of lons, lats, and azimuths of the located 
             endpoint. 
 
         """
@@ -128,10 +124,10 @@ cdef class Geodesic:
             raise ValueError("Inputs must have common length n or length one.")
 
         cdef double[:,:] return_pts = np.empty((n_points,3))
-        cdef double[:] lat, lon, azi
+        cdef double[:] lon, lat, azi
 
-        lat = np.empty(n_points)
         lon = np.empty(n_points)
+        lat = np.empty(n_points)
         azi = np.empty(n_points)
 
         with nogil:
@@ -139,8 +135,8 @@ cdef class Geodesic:
 
                 geod_direct(self.geod, pts[i,1], pts[i,0], azims[i], dists[i], 
                             &lat[i], &lon[i], &azi[i])
-                return_pts[i,0] = lat[i]
-                return_pts[i,1] = lon[i]
+                return_pts[i,0] = lon[i]
+                return_pts[i,1] = lat[i]
                 return_pts[i,2] = azi[i]
 
         return np.array(return_pts)
@@ -155,12 +151,12 @@ cdef class Geodesic:
 
         Args:
 
-            * points - An n (or 1) by 2 numpy.ndarray, list or tuple of lat-lon
+            * points - An n (or 1) by 2 numpy.ndarray, list or tuple of lon-lat
                        points.
                        The starting point(s) from which to travel.
 
             * endpoints - An n (or 1) by 2 numpy.ndarray, list or tuple of 
-                          lat-lon points.
+                          lon-lat points.
                           The point(s) to travel to.            
 
         Returns:
@@ -207,8 +203,8 @@ cdef class Geodesic:
         with nogil:
             for i in prange(n_points):
 
-                geod_inverse(self.geod, pts[i,0], pts[i,1], epts[i,0],
-                             epts[i,1], &dist[i], &azi0[i], &azi1[i])
+                geod_inverse(self.geod, pts[i,1], pts[i,0], epts[i,1],
+                             epts[i,0], &dist[i], &azi0[i], &azi1[i])
 
                 results[i,0] = dist[i]
                 results[i,1] = azi0[i]
@@ -216,16 +212,16 @@ cdef class Geodesic:
 
         return np.array(results)
 
-    def circle(self, double lat, double lon, double radius, int n_samples=180,
+    def circle(self, double lon, double lat, double radius, int n_samples=180,
                endpoint=False):
         """
         Find a geodesic circle of given radius at a given point.
 
         Args:
 
-            * lat - Latitude coordinate of the centre.
-
             * lon - Longitude coordinate of the centre.
+
+            * lat - Latitude coordinate of the centre.
 
             * radius - The radius of the circle (metres).
 
@@ -237,7 +233,7 @@ cdef class Geodesic:
                          returned array.           
 
         Returns:
-            An n_samples by 2 np.ndarray of evenly spaced lat-lon points on the 
+            An n_samples by 2 np.ndarray of evenly spaced lon-lat points on the 
             circle. 
 
         """   
@@ -245,7 +241,7 @@ cdef class Geodesic:
         cdef int i
 
         # Put the input arguments into c-typed values.        
-        cdef double[:,:] center = np.array([lat, lon]).reshape((1,2))
+        cdef double[:,:] center = np.array([lon, lat]).reshape((1,2))
         cdef double[:] radius_m = np.asarray(radius).reshape(1)
 
         azimuths = np.linspace(360., 0., n_samples, 
