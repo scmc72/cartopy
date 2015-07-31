@@ -27,7 +27,7 @@ The CRS class is the base-class for all projections defined in :mod:`cartopy.crs
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 import numpy as np
 cimport numpy as np
-from cython.parallel import prange
+from cython.parallel cimport prange
 
 
 # TODO: Support proj4 <4.9 with spherical approximations?
@@ -62,44 +62,75 @@ cdef class Geodesic:
         geod_direct(self.geod, lat0, lon0, azi0, distance, &lat, &lon, &azi)
         return lon, lat, azi
         
-    def vec_direct(self, double[:,:] lon0lat0, double[:] azi0, double[:] distance):
+    def vec_direct(self, points, azimuths, distances):
         
         cdef int n_points, i
+        cdef double[:,:] pts
+        cdef double[:] azims, dists
         
-        n_points = azi0.shape[0]
+        pts = np.array(points, dtype = np.float64)
+        azims = np.array(azimuths, dtype = np.float64)
+        dists = np.array(distances, dtype = np.float64)
         
-        if lon0lat0.shape[1] != 2:
+        n_points = max(pts.shape[0], azims.size, dists.size)
+        
+        if pts.shape[1] != 2:
             raise ValueError('Array of points must have shape (n,2).')
         
-        if distance.size == 1: 
-            distance = np.zeros(n_points) + distance
+        try:
+        
+            tmp = np.zeros((n_points,2))
+            tmp[:,0] += pts[:,0]
+            tmp[:,1] += pts[:,1]
             
-        elif n_points != distance.size:
-            raise ValueError('Number of points must be the same for distances:'
-                             'array sizes do not match!')
-        if lon0lat0.shape[0] == 1: 
-            tmp = np.zeros((n_points, 2))
-            tmp[:,0] += lon0lat0[0,0]
-            tmp[:,1] += lon0lat0[0,1]
+            pts = tmp
             
-            lon0lat0 = tmp
+            azims = np.zeros(n_points) + azims[:]
             
-        elif n_points != lon0lat0.shape[0]:
-            raise ValueError('Number of azimuths must be the same for points:'
-                             'array sizes do not match!')
+            dists = np.zeros(n_points) + dists[:]
+            
+        except ValueError:
+            raise ValueError("Inputs must have common length n or length one.")
+        
+        
+        #n_points = azi0.shape[0]
+        
+        
+        
+        #if distance.size == 1: 
+        #    distance = np.zeros(n_points) + distance
+            
+        #elif n_points != distance.size:
+        #    raise ValueError('Number of points must be the same for distances:'
+        #                     'array sizes do not match!')
+        #if points.shape[0] == 1: 
+        #    tmp = np.zeros((n_points, 2))
+        #    tmp[:,0] += points[0,0]
+        #    tmp[:,1] += points[0,1]
+            
+        #    points = tmp
+            
+        #elif n_points != points.shape[0]:
+        #    raise ValueError('Number of azimuths must be the same for points:'
+        #                     'array sizes do not match!')
         
         #take in a lat-long array; an azimuth array and a distance array
         cdef double[:,:] return_pts = np.empty((n_points,3))
         
-        cdef double lat, lon, azi
+        cdef double[:] lat, lon, azi
+        
+        lat = np.empty(n_points)
+        lon = np.empty(n_points)
+        azi = np.empty(n_points)
         
         with nogil:
             for i in prange(n_points):
             
-                geod_direct(self.geod, lon0lat0[i,1], lon0lat0[i,0], azi0[i], distance[i], &lat, &lon, &azi)
-                return_pts[i,0] = lon
-                return_pts[i,1] = lat
-                return_pts[i,2] = azi
+                geod_direct(self.geod, pts[i,1], pts[i,0],
+                            azims[i], dists[i], &lat[i], &lon[i], &azi[i])
+                return_pts[i,0] = lon[i]
+                return_pts[i,1] = lat[i]
+                return_pts[i,2] = azi[i]
             
             
         return np.array(return_pts)
@@ -129,17 +160,19 @@ cdef class Geodesic:
         
         cdef double[:,:] results = np.empty((n_points, 3))
         
-        cdef double dist, azi0, azi1
+        dist = np.empty(n_points)
+        azi0 = np.empty(n_points)
+        azi1 = np.empty(n_points)
         
         with nogil:
             for i in prange(n_points):
                 
-                geod_inverse(self.geod, points[i,1], points[i,0], endpoints[i,1],
-                             endpoints[i,0], &dist, &azi0, &azi1)
+                geod_inverse(self.geod, points[i,0], points[i,1], endpoints[i,0],
+                             endpoints[i,1], &dist[i], &azi0[i], &azi1[i])
                 
-                results[i,0] = dist
-                results[i,1] = azi0
-                results[i,2] = azi1
+                results[i,0] = dist[i]
+                results[i,1] = azi0[i]
+                results[i,2] = azi1[i]
         
         return np.array(results)
     
@@ -173,15 +206,17 @@ def main():
     lat1, lon1 = 40.6, -73.8 # JFK Airport
     lat2, lon2 = 51.6, -0.5  # LHR Airport
     
-    print g.inverse(lon1, lat1, lon2, lat2)
+    #print g.inverse(lon1, lat1, lon2, lat2)
     # 5551759.4003186785 KM.
-    print g.circle(0, 0, 1000000, 10)
+    #print g.circle(0, 0, 1000000, 10)
     
     import cartopy.crs as ccrs
     import matplotlib.pyplot as plt
     
-    circle = g.circle(0, 52, 500000, n_samples=360, endpoint=True).T
+    circle = g.circle(0, 52, 500000, n_samples=360, endpoint=True)
+    print circle
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.coastlines()
+    ax.set_global()
     plt.plot(circle[:,0], circle[:,1], transform=ccrs.Geodetic())
     plt.show()
