@@ -68,17 +68,13 @@ cdef class Geodesic:
         cdef double[:,:] pts
         cdef double[:] azims, dists
         
-        pts = np.array(points, dtype = np.float64)
-        azims = np.array(azimuths, dtype = np.float64)
-        dists = np.array(distances, dtype = np.float64)
+        pts = np.array(points, dtype = np.float64).reshape((-1,2))
+        azims = np.array(azimuths, dtype = np.float64).reshape(-1)
+        dists = np.array(distances, dtype = np.float64).reshape(-1)
         
         n_points = max(pts.shape[0], azims.size, dists.size)
         
-        if pts.shape[1] != 2:
-            raise ValueError('Array of points must have shape (n,2).')
-        
         try:
-        
             tmp = np.zeros((n_points,2))
             tmp[:,0] += pts[:,0]
             tmp[:,1] += pts[:,1]
@@ -91,28 +87,6 @@ cdef class Geodesic:
             
         except ValueError:
             raise ValueError("Inputs must have common length n or length one.")
-        
-        
-        #n_points = azi0.shape[0]
-        
-        
-        
-        #if distance.size == 1: 
-        #    distance = np.zeros(n_points) + distance
-            
-        #elif n_points != distance.size:
-        #    raise ValueError('Number of points must be the same for distances:'
-        #                     'array sizes do not match!')
-        #if points.shape[0] == 1: 
-        #    tmp = np.zeros((n_points, 2))
-        #    tmp[:,0] += points[0,0]
-        #    tmp[:,1] += points[0,1]
-            
-        #    points = tmp
-            
-        #elif n_points != points.shape[0]:
-        #    raise ValueError('Number of azimuths must be the same for points:'
-        #                     'array sizes do not match!')
         
         #take in a lat-long array; an azimuth array and a distance array
         cdef double[:,:] return_pts = np.empty((n_points,3))
@@ -140,25 +114,36 @@ cdef class Geodesic:
         geod_inverse(self.geod, lat0, lon0, lat1, lon1, &dist, &azi0, &azi1)
         return dist, azi0, azi1
         
-    def vec_inverse(self, double[:,:] points, double[:,:] endpoints):
+    def vec_inverse(self, points, endpoints):
         
         cdef int n_points, i
         
-        n_points = points.shape[0]
+        cdef double[:,:] pts, epts
         
-        ####CHECKS
+        pts = np.array(points, dtype = np.float64).reshape((-1,2))
+        epts =  np.array(endpoints, dtype = np.float64).reshape((-1,2))
         
-        #check same number of start and end points
-        if n_points != endpoints.shape[0]:        
-            raise ValueError('Number of start points and number fo end points'
-                             'must be the same.')
-        #check it is list of points
-        if points.shape[1] != 2 or endpoints.shape[1] != 2:
-            raise ValueError('Arguments should be arrays of points (i.e. have'
-                             'shape (n,2)).')
-        ####
+        n_points = max(pts.shape[0], epts.shape[0])
+        
+        try:
+            tmp = np.zeros((n_points,2))
+            tmp[:,0] += pts[:,0]
+            tmp[:,1] += pts[:,1]
+            
+            pts = tmp
+            
+            tmp = np.zeros((n_points,2))
+            tmp[:,0] += epts[:,0]
+            tmp[:,1] += epts[:,1]
+            
+            epts = tmp
+            
+        except ValueError:
+            raise ValueError("Inputs must have common length n or length one.")
         
         cdef double[:,:] results = np.empty((n_points, 3))
+        
+        cdef double[:] dist, azi0, azi1
         
         dist = np.empty(n_points)
         azi0 = np.empty(n_points)
@@ -167,8 +152,8 @@ cdef class Geodesic:
         with nogil:
             for i in prange(n_points):
                 
-                geod_inverse(self.geod, points[i,0], points[i,1], endpoints[i,0],
-                             endpoints[i,1], &dist[i], &azi0[i], &azi1[i])
+                geod_inverse(self.geod, pts[i,0], pts[i,1], epts[i,0],
+                             epts[i,1], &dist[i], &azi0[i], &azi1[i])
                 
                 results[i,0] = dist[i]
                 results[i,1] = azi0[i]
@@ -191,7 +176,7 @@ cdef class Geodesic:
         
         geod = Geodesic()
 
-        return geod.vec_direct(center, azimuths, distance_m)
+        return geod.vec_direct(center, azimuths, distance_m)[:, 0:2]
         
 
     def __dealloc__(self):
