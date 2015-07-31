@@ -1,1 +1,1 @@
-from _geodesic import Geodesic, main
+from _geodesic import Geodesic
