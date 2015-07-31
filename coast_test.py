@@ -9,13 +9,31 @@ fig = plt.figure()
 
 platcar = ccrs.PlateCarree()
 
-coord_sys = ccrs.InterruptedGoodeHomolosine()
+coord_sys = ccrs.Robinson()
+
+bg_valid = False
 
 ax = plt.axes(projection=coord_sys)
 
 ax.coastlines(resolution = '110m')
 
 ax.set_global()
+
+plt.show(block=False)
+plt.draw()
+fig.canvas.draw()
+
+background = fig.canvas.copy_from_bbox(ax.bbox)
+
+#plt.figure()
+
+#print dir(background)
+#print background.to_string()
+
+#plt.imshow(background)
+
+
+#plt.show()
 
 total = 0
 
@@ -35,12 +53,12 @@ for string in cartopy.feature.NaturalEarthFeature('physical', 'coastline', '110m
 
 def brute_neighbours(x,y,location):
     coasts = np.array(zip(x,y))
-    print coasts
+    #print coasts
     emp = np.zeros(coasts.shape)
     location = np.array(location)
     
     emp = emp + location
-    print emp
+    #print emp
     loc =[]
    
     dist = geodesic.Geodesic().vec_inverse(emp,coasts)
@@ -48,44 +66,53 @@ def brute_neighbours(x,y,location):
              
     return coasts[np.argmin(dist[:,0])]
     
-            
-            
-            
-    
-
 
 #plt.plot(x, y, 'ro', transform = ccrs.Geodetic())
 
 locations = []
-def mouse_moved(event):
+
+
+def resize(event):
+    
+    fig.set_figwidth(event.width)
+    fig.set_figheight(event.height)
     
     plt.cla()
+    plt.show(block=False)
+    plt.draw()
 
-    ax.coastlines(resolution = '110m')
-    ax.set_global()
+    background = fig.canvas.copy_from_bbox(ax.bbox)
+
+def mouse_moved(event):
+
+    fig.canvas.restore_region(background)
+    
+    
+    location = [0,0]
+    
     if event.xdata is not None and event.ydata is not None:
-        point = platcar.transform_point(event.xdata, event.ydata, coord_sys)
-        locations.append(point)
-    if len(locations) > 1:
-        del locations[0]
+        location = platcar.transform_point(event.xdata, event.ydata, coord_sys)
+
     
-    for location in locations:
-        plt.plot(location[0], location[1], 'ro', transform = platcar)
+    m_pt, = plt.plot(location[0], location[1], 'ro', transform = platcar)
 
-        #coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
-        
-        location = ccrs.PlateCarree().transform_point(location[0],location[1], platcar)
-
-        coast_point = brute_neighbours(x,y,location)
-
-        plt.plot(coast_point[0], coast_point[1], 'bo', transform = platcar)
-
-        plt.plot([location[0], coast_point[0]], [location[1], coast_point[1]], linewidth = 2, transform = platcar)
+    #coast_index = tree.query(ccrs.PlateCarree().transform_point(location[0],location[1], platcar))[1]
     
-    fig.canvas.draw()
+    location = ccrs.PlateCarree().transform_point(location[0],location[1], platcar)
+
+    coast_point = brute_neighbours(x,y,location)
+
+    c_pt, = plt.plot(coast_point[0], coast_point[1], 'bo', transform = platcar)
+
+    line, = plt.plot([location[0], coast_point[0]], [location[1], coast_point[1]], linewidth = 2, transform = platcar)
+    
+    ax.draw_artist(m_pt)
+    ax.draw_artist(c_pt)
+    ax.draw_artist(line)
+    
+    fig.canvas.blit(ax.bbox)
 
 print total
-#ax.set_global()
 
 ax.add_geometries(cartopy.feature.COASTLINE.geometries().next(), ccrs.Geodetic(), facecolor = 'blue')
 
@@ -93,16 +120,8 @@ ax.add_geometries(cartopy.feature.COASTLINE.geometries().next(), ccrs.Geodetic()
 
 cid = fig.canvas.mpl_connect('motion_notify_event', mouse_moved)
 
-#plt.show()
+fig.canvas.mpl_connect('resize_event', resize)
 
-
-#locc = [50,60]
-
-#loc = brute_neighbours(x,y,locc)
-#print loc
-#plt.plot(loc[0],loc[1],'ro',transform = platcar)
-#plt.plot(locc[0],locc[1],'bo',transform = platcar)
-#plt.plot([locc[0],loc[0]],[locc[1],loc[1]],transform = platcar)
 plt.show()
 
 
