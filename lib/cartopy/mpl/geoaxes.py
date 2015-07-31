@@ -416,6 +416,25 @@ class GeoAxes(matplotlib.axes.Axes):
         feature = cartopy.feature.NaturalEarthFeature('physical', 'coastline',
                                                       resolution, **kwargs)
         return self.add_feature(feature)
+        
+    def tissot(self, radius_km = 500000, n_samples = 80, lat_num = 10, lon_num = 6, **kwargs):
+        """
+        Adds tissots indicatrices to the current axes using the geodesic class
+
+        """
+        #create an instance of the Geodesic class
+        geod = cartopy.geodesic.Geodesic()
+        #create an empty list to populate with shapely geometry polygons
+        geoms = []
+        
+        for lat in np.linspace(-80, 80, lat_num):
+            for lon in np.linspace(-180, 180, lon_num, endpoint=False):
+                lonlat = geod.circle(lon, lat, radius_km)
+                
+                geoms.append(sgeom.Polygon(zip(lonlat[:,0],lonlat[:,1])))
+                
+        feature = cartopy.feature.ShapelyFeature(geoms, ccrs.Geodetic(), **kwargs)
+        return self.add_feature(feature)
 
     def natural_earth_shp(self, name='land', resolution='110m',
                           category='physical', **kwargs):
