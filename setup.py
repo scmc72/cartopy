@@ -49,7 +49,7 @@ PY3 = (sys.version_info[0] == 3)
 
 # Please keep in sync with INSTALL file.
 GEOS_MIN_VERSION = (3, 3, 3)
-PROJ_MIN_VERSION = (4, 8, 0)
+PROJ_MIN_VERSION = (4, 9, 0)
 
 HERE = os.path.dirname(__file__)
 
@@ -372,15 +372,13 @@ setup(
             library_dirs=[library_dir] + proj_library_dirs,
             **extra_extension_args
         ),
-        Extension('cartopy.geodesic._geodesic', 
-		  ['lib/cartopy/geodesic/_geodesic.pyx'],
-                  include_dirs=[include_dir, np.get_include(),'/data/local/beckmann/proj4_tmp/include'] + proj_includes,
-                  libraries=proj_libraries,
-                  library_dirs=['/data/local/beckmann/proj4_tmp/lib', library_dir] + proj_library_dirs,
-                  extra_compile_args=['-fopenmp'],
-                  extra_link_args=['-fopenmp'],
-                  **extra_extension_args
-                  ),
+	# Requires proj4 v4.9
+	Extension('cartopy.geodesic._geodesic', ['lib/cartopy/geodesic/_geodesic.pyx'],
+            include_dirs=[include_dir, np.get_include()] + proj_includes,
+            libraries=proj_libraries,
+            library_dirs=[library_dir] + proj_library_dirs,              
+            **extra_extension_args    
+        ),
     ],
 
     cmdclass={'build_ext': build_ext},
