@@ -49,7 +49,7 @@ import cartopy.mpl.feature_artist as feature_artist
 import cartopy.mpl.patch as cpatch
 from cartopy.mpl.slippy_image_artist import SlippyImageArtist
 from cartopy.vector_transform import vector_scalar_to_grid
-
+from cartopy import geodesic
 
 assert matplotlib.__version__ >= '1.2', ('Cartopy can only work with '
                                          'matplotlib 1.2 or greater.')
@@ -416,24 +416,36 @@ class GeoAxes(matplotlib.axes.Axes):
         feature = cartopy.feature.NaturalEarthFeature('physical', 'coastline',
                                                       resolution, **kwargs)
         return self.add_feature(feature)
-        
-    def tissot(self, radius_km = 500000, n_samples = 80, lat_num = 10, lon_num = 6, **kwargs):
+
+    def tissot(self, rad_km=5e5, n_samples=80, lon_n=10, lat_n=6, **kwargs):
         """
-        Adds tissots indicatrices to the current axes using the geodesic class
+        Adds tissots indicatrices to the current axes using the geodesic class.
+
+        Kwargs:
+
+            * rad_km - The radius in km of the the circles to be drawn.
+
+            * n_samples - Integer number of points sampled around the
+              circumference of each circle.
+
+            * lon_n - Number of circles in the longitudinal direction.
+
+            * lat_n - Number of circles in the latitudinal direction.
 
         """
         #create an instance of the Geodesic class
         geod = cartopy.geodesic.Geodesic()
         #create an empty list to populate with shapely geometry polygons
         geoms = []
-        
-        for lat in np.linspace(-80, 80, lat_num):
-            for lon in np.linspace(-180, 180, lon_num, endpoint=False):
-                lonlat = geod.circle(lon, lat, radius_km)
-                
-                geoms.append(sgeom.Polygon(zip(lonlat[:,0],lonlat[:,1])))
-                
-        feature = cartopy.feature.ShapelyFeature(geoms, ccrs.Geodetic(), **kwargs)
+
+        for lat in np.linspace(-80, 80, lat_n):
+            for lon in np.linspace(-180, 180, lon_n, endpoint=False):
+                circle = geod.circle(lon, lat, rad_km, n_samples=n_samples)
+
+                geoms.append(sgeom.Polygon(zip(circle[:,0],circle[:,1])))
+
+        feature = cartopy.feature.ShapelyFeature(geoms, ccrs.Geodetic(),
+                                                 **kwargs)
         return self.add_feature(feature)
 
     def natural_earth_shp(self, name='land', resolution='110m',
