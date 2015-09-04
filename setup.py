@@ -316,7 +316,6 @@ else:
 with open(os.path.join(HERE, 'README.rst'), 'r') as fh:
     description = ''.join(fh.readlines())
 
-
 # Main setup
 # ==========
 setup(
