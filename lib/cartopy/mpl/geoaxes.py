@@ -419,7 +419,7 @@ class GeoAxes(matplotlib.axes.Axes):
 
     def tissot(self, rad_km=5e5, n_samples=80, lon_n=10, lat_n=6, **kwargs):
         """
-        Adds tissots indicatrices to the current axes using the geodesic class.
+        Adds Tissot's indicatrices to the current axes using the geodesic class.
 
         Kwargs:
 
@@ -433,9 +433,7 @@ class GeoAxes(matplotlib.axes.Axes):
             * lat_n - Number of circles in the latitudinal direction.
 
         """
-        #create an instance of the Geodesic class
         geod = cartopy.geodesic.Geodesic()
-        #create an empty list to populate with shapely geometry polygons
         geoms = []
 
         for lat in np.linspace(-80, 80, lat_n):
